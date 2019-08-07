@@ -29,13 +29,14 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     //MARK: - Networking
     func requestWeather(parameters : [String: String]){
         
+        
         var components = URLComponents(string: WEATHER_URL)!
         components.queryItems = parameters.map {
             (key, value) in URLQueryItem(name: key, value: value)
         }
         
         guard let url = components.url else { return }
-        print(url)
+//        print(url)
         
         URLSession.shared.dataTask(with: url) { (data, response, error) in
             if let error = error {
@@ -49,12 +50,11 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
                 }
             }
 
-            guard let data = data else { return }
-            print("Data: \(data)")
-            self.parseWeatherData(data: data)
-
+            guard let data = data else {return}
+            DispatchQueue.main.async {
+                self.parseWeatherData(data: data)
+            }
         }.resume()
-        
     }
     
     //MARK: - JSON Parsing
@@ -62,6 +62,7 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
         do {
             let weatherData = try JSONDecoder().decode(OpenWeatherResponse.self, from: data)
             print(weatherData)
+            updateUI(weatherData: weatherData)
         }
         catch let error {
             print("Response parsing error \(error)")
@@ -69,6 +70,18 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     }
     
     //MARK: - UI Updates
+    private func updateUI(weatherData: OpenWeatherResponse){
+        if let main = weatherData.main, let temperature = main.temp{
+            temperatureLabel.text = "\(Int(temperature))"
+        }
+        if let cityName = weatherData.name {
+            cityLabel.text = cityName
+        }
+        if let weather = weatherData.weather, let conditions = weather[0].id {
+            weatherIcon.image = UIImage(named: updateWeatherIcon(condition: conditions))
+        }
+        
+    }
     
     
     //MARK: Location Manager Delegate Methods
