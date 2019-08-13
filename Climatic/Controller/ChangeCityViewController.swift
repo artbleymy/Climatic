@@ -7,15 +7,31 @@
 //
 
 import UIKit
+protocol ChangeCityDelegate {
+    
+    func userEnteredANewCityName(city: String)
+    
+}
+
 
 class ChangeCityViewController: UIViewController {
 
+    var delegate : ChangeCityDelegate?
     
+    var cityName: String?
     
     @IBOutlet weak var changeCityTextField: UITextField!
     
     
     @IBAction func changeCity(_ sender: UIButton) {
+        
+        guard let cityName = changeCityTextField.text else { return }
+        
+        delegate?.userEnteredANewCityName(city: cityName)
+        
+        self.dismiss(animated: true, completion: nil)
+        
+        
     }
     
     @IBAction func backButtonPressed(_ sender: UIButton) {
@@ -28,6 +44,10 @@ class ChangeCityViewController: UIViewController {
         super.viewDidLoad()
 
         // Do any additional setup after loading the view.
+        if let city = cityName{
+            changeCityTextField.text = city
+
+        }
     }
     
 

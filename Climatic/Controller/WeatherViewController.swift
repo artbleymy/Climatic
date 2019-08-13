@@ -10,7 +10,7 @@ import UIKit
 import CoreLocation
 
 
-class WeatherViewController: UIViewController, CLLocationManagerDelegate {
+class WeatherViewController: UIViewController, CLLocationManagerDelegate, ChangeCityDelegate {
 
     //MARK: - Constants
     let WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather"
@@ -19,6 +19,7 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     
     //TODO: - Declare instance variables
     let locationManager = CLLocationManager()
+    var weatherDataModel = OpenWeatherResponse()
     
     //MARK: - IBOutlets
     @IBOutlet weak var temperatureLabel: UILabel!
@@ -28,6 +29,8 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     
     //MARK: - Networking
     func requestWeather(parameters : [String: String]){
+        
+//        cityLabel.text = "Loading..."
         
         
         var components = URLComponents(string: WEATHER_URL)!
@@ -60,9 +63,9 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     //MARK: - JSON Parsing
     private func parseWeatherData(data: Data){
         do {
-            let weatherData = try JSONDecoder().decode(OpenWeatherResponse.self, from: data)
-            print(weatherData)
-            updateUI(weatherData: weatherData)
+            weatherDataModel = try JSONDecoder().decode(OpenWeatherResponse.self, from: data)
+            print(weatherDataModel)
+            updateUI(weatherData: weatherDataModel)
         }
         catch let error {
             print("Response parsing error \(error)")
@@ -72,7 +75,7 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     //MARK: - UI Updates
     private func updateUI(weatherData: OpenWeatherResponse){
         if let main = weatherData.main, let temperature = main.temp{
-            temperatureLabel.text = "\(Int(temperature))"
+            temperatureLabel.text = "\(Int(temperature))°"
         }
         if let cityName = weatherData.name {
             cityLabel.text = cityName
@@ -82,9 +85,22 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
         }
         
     }
+    //MARK: - Prepare for segue
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "goToCityChange" {
+            
+            let destinationVC = segue.destination as! ChangeCityViewController
+            destinationVC.delegate = self
+            if let cityName = cityLabel.text {
+                destinationVC.cityName = cityName
+            }
+            
+            
+        }
+    }
     
     
-    //MARK: Location Manager Delegate Methods
+    //MARK: - Location Manager Delegate Methods
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let location = locations[locations.count - 1]
         if location.horizontalAccuracy > 0 {
@@ -92,9 +108,8 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
             print("\(location.coordinate.longitude) \(location.coordinate.latitude)")
             let latitude = location.coordinate.latitude
             let longitude = location.coordinate.longitude
-            let appid = Keys().APP_ID
             
-            let params : [String: String] = ["lat" : "\(latitude)", "lon" : "\(longitude)", "appid" : appid, "units": "metric"]
+            let params : [String: String] = ["lat" : "\(latitude)", "lon" : "\(longitude)", "appid" : Keys().APP_ID, "units": "metric"]
             requestWeather(parameters: params)
 
         }
@@ -128,9 +143,20 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     
     
     //MARK: Change City Delegate Method
+    func userEnteredANewCityName(city: String) {
+        print(city)
+        let params : [String: String] = ["q" : "\(city)", "appid" : Keys().APP_ID, "units": "metric"]
+        requestWeather(parameters: params)
+        
+    }
     
     
-    //MARK: -
+    
+    //MARK: - ViewController Delegate Methods
+    override var preferredStatusBarStyle: UIStatusBarStyle{
+        return .lightContent
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
@@ -138,6 +164,9 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
         locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         locationManager.requestAlwaysAuthorization()
         locationManager.startUpdatingLocation()
+        
+        
+        
         
     }
 
